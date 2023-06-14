@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { tempMovieData, tempWatchedData } from "../data/MovieData";
 import StarRating from "./StarRating";
 import Loader from "./Loader";
+import { useKey } from "./useKey";
 
 const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
@@ -59,6 +60,15 @@ export function MovieDetails({
   const [isLoading, setIsLoading] = useState(false);
   const [userRating, setUserRating] = useState("");
 
+  const countRef = useRef(0);
+
+  useEffect(
+    function () {
+      if (userRating) countRef.current++;
+    },
+    [userRating]
+  );
+
   const isWatched = watched.map((movie) => movie.imdbID).includes(selectedId);
   const watchedUserRating = watched.find(
     (movie) => movie.imdbID === selectedId
@@ -77,6 +87,22 @@ export function MovieDetails({
     Genre: genre,
   } = movie;
 
+  // if (imdbRating > 8) [isTop, setIsTop] = useState(true); will not work --> conditional state
+  // if (imdbRating > 8) return <p>Greatest ever!</p>; will not work --> changes order of hooks
+
+  // const [isTop, setIsTop] = useState(imdbRating > 8);
+  // console.log(isTop);
+  // useEffect(
+  //   function () {
+  //     setIsTop(imdbRating > 8);
+  //   },
+  //   [imdbRating]
+  // );
+
+  const isTop = imdbRating > 8;
+
+  const [avgRating, setAvgRating] = useState(0);
+
   function handleAdd() {
     const newWatchedMovie = {
       imdbID: selectedId,
@@ -85,28 +111,18 @@ export function MovieDetails({
       poster,
       imdbRating: Number(imdbRating),
       runtime: Number(runtime.split(" ").at(0)),
+      genre,
       userRating,
+      countRatingDecisions: countRef.current,
     };
     onAddWatched(newWatchedMovie);
     onCloseMovie();
+
+    // setAvgRating(Number(imdbRating));
+    // setAvgRating((avgRating) => (avgRating + userRating) / 2);
   }
 
-  useEffect(
-    function () {
-      function callback(e) {
-        if (e.code === "Escape") {
-          onCloseMovie();
-        }
-      }
-
-      document.addEventListener("keydown", callback);
-
-      return function () {
-        document.removeEventListener("keydown", callback);
-      };
-    },
-    [onCloseMovie]
-  );
+  useKey("Escape", onCloseMovie);
 
   useEffect(
     function () {
@@ -152,6 +168,7 @@ export function MovieDetails({
               <p>
                 {released} &bull; {runtime}
               </p>
+              <p>{genre}</p>
               <p>
                 <span>⭐</span>
                 {imdbRating} IMDb rating
@@ -160,6 +177,9 @@ export function MovieDetails({
               <p> Directed by {director}</p>
             </div>
           </header>
+
+          {/* <p>{avgRating}</p> */}
+
           <section>
             <div className="rating">
               {isWatched ? (
